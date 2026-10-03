@@ -1,0 +1,76 @@
+# Base config for SOFE streaming MCM pretraining.
+# Architecture presets should extend this file and only override
+# `model.mcm.sofe_architecture`. Concrete runs then extend the architecture
+# preset and set schedule / training / logging specifics.
+_base_: "../../_base/default.yaml"
+
+num_gpus: 1
+
+training:
+  mode: "mcm_pretrain"
+  batch_size: 2
+  num_epochs: 12
+  optimizer: "adam"
+  learning_rate: 0.0005
+  weight_decay: 0.0
+  lr_scheduler: "cosine"
+  warmup_epochs: 0
+  warmup_lr: 0.0
+  use_amp: false
+  grad_clip: 5.0
+  log_grad_norm: true
+  log_grad_norm_interval: 50
+  use_mosaic: false
+  use_mixup: false
+  mosaic_prob: 0.0
+  mixup_prob: 0.0
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/dsec_short.yaml"
+  mapper_load_events: true
+  mapper_load_images: false
+  mapper_load_tracks: false
+  mapper_build_targets: false
+  mapper_load_flow: false
+  num_workers: 4
+
+model:
+  mcm:
+    enabled: true
+    mode: "ann"
+    architecture: "sofe"
+    input_representation: "streaming_events"
+    prefetcher_type: "streaming"
+    loss_type: "event_warping"
+    warper_type: "sparse_event"
+    flow_scaling: 640.0
+    loss_scaling: true
+    smooth_weight: 0.001
+    partition_mode: "fixed_time"
+    step_time_us: 5000
+    events_per_step_target: null
+    step_dt_max_us: null
+    step_dt_min_us: null
+    max_steps_per_sample: null
+    readout_every_n_steps: null
+    readout_interval_us: null
+    decay_tau_us: 10000.0
+    reset_on_sequence_change: true
+    bptt_steps: null
+    sofe_search_space: {}
+
+eval:
+  interval: 2
+  save_interval: 1
+
+log:
+  output_dir: "./outputs/mcm/sofe"
+  experiment_name: "sofe_pretrain"
+  log_interval: 50
+
+wandb:
+  use_wandb: true
+  project_name: "smcfnet_sofe_streaming"
+  log_every_n_steps: 10
+  flush_every_n_steps: 50
+  mode: "online"

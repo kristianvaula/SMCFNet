@@ -1,0 +1,33 @@
+# Config consumed by tools/precompute_cuadrado_flow.py. Same data contract and
+# architecture as cuadrado_precompute.yaml; ONLY the checkpoint differs:
+# Kristian's proper 35-epoch Cuadrado (edge-aware-L1, supervised-scheduled,
+# smooth_weight 0.0005) replacing the weak epoch_10 sw150 self-sup checkpoint.
+# The script reads only data.* and model.mcm.*; loss/schedule fields are
+# training-only and irrelevant to inference, so they are intentionally omitted.
+_base_: "../_base/default.yaml"
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/dsec.yaml"
+  event_bins: 21              # Cuadrado was pretrained at 21 bins
+  event_window_ms: 50
+  image_height: 480
+  image_width: 640
+  mapper_load_events: true
+  mapper_load_tracks: false
+  mapper_load_images: false
+  mapper_prefer_distorted: true
+  mapper_build_targets: false
+
+model:
+  pretrained: false           # script does not build the detector
+  mcm:
+    enabled: true
+    architecture: "cuadrado_unet"
+    mode: "snn"
+    encoder_channels: [32, 64, 128, 256]
+    num_res_blocks: 2
+    neuron_type: "lif"
+    lif_alpha: 0.9
+    lif_theta: 1.0
+    flow_scaling: 1.0
+    pretrained_weights: "outputs/baseline_v3/mcm/cuadrado/scheduled_grid/cuadrado_sched_g07_edgeaware_sw0005_e35/epoch_35.pth"

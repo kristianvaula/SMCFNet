@@ -1,0 +1,142 @@
+_base_: "../../_base/default.yaml"
+
+# Detector-side template for the SSNN-Net v2 SOFE variant
+# (sofe_architecture.family=ssnn_net), frozen SMCM + IWE fusion.
+# Architecture fields mirror the selected Phase-1 hybrid partition run
+# (ssnn_net_v2_hybrid_g11_1_r2_dsec_sched_pretrain). Downstream configs only
+# need to override pretrained_weights / probe-specific training.
+
+data:
+  num_workers: 2
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+  drop_last: true
+  sampler_shuffle: true
+  event_bins: 5
+  image_height: 1080
+  image_width: 1440
+  mapper_load_events: true
+  mapper_load_tracks: true
+  mapper_load_images: true
+  mapper_prefer_distorted: false
+  mapper_rectified_events_resolution: "orig"
+  mapper_build_targets: true
+
+model:
+  input_mode: "dual"
+  size: "m"
+  pretrained: true
+  pretrained_path: "./src/smcfnet/model/weights/yolox/yolox_m.pth"
+  event_representation: "voxel"
+  mcm:
+    enabled: true
+    architecture: "sofe"
+    mode: "snn"
+    estimator_representation: "streaming_events"
+    output_representation: "iwe"
+    input_representation: "streaming_events"
+    prefetcher_type: "streaming"
+    reset_on_sequence_change: true
+    bptt_steps: 5
+    partition_mode: "hybrid"
+    events_per_step_target: 50000
+    decay_tau_us: 5000.0
+    sofe_architecture:
+      family: "ssnn_net"
+      step_encoding: "hist2"
+      normalize_counts: false
+      count_encoding: "raw"
+      count_scale: 0.25
+      base_channels: 32
+      kernel_size: 5
+      ssnn_multiply_factor: 5.0
+      ssnn_hard_reset: false
+      ssnn_spike_decay_mode: "decay"
+      surrogate_function: "sigmoid"
+      surrogate_alpha: 8.0
+      detach_reset: false
+      spiking_v_threshold: 1.2
+      spiking_v_reset: 0.0
+      readout_type: "single_scale"
+      flow_activation: "softsign"
+      flow_head_init: "small_normal"
+      flow_head_init_std: 0.01
+      ssnn_pred_kernel_size: 5
+      ssnn_version: "v2"
+      ssnn_stage_channels: [16, 32, 64, 128]
+      ssnn_num_stages: 4
+      ssnn_bottleneck_dilations: [1, 2, 4]
+      ssnn_encoder_signal: "membrane"
+      ssnn_edge_tap: "none"
+      ssnn_refine_channels: 32
+      ssnn_refine_layers: 1
+      ssnn_readout: "single"
+    sofe_search_space: {}
+    contrast_weight: 0.5
+    loss_type: "event_warping_supervised_scheduled"
+    loss_kwargs:
+      smoothness_mode: "edge_aware_l1"
+      edge_weight_gamma: 5.0
+      alpha: 1.0
+      beta: 1.0
+      max_epe: 128.0
+      schedule_total_epochs: 30
+      self_supervised_only_epochs: 6
+      schedule_start_epoch: 0
+    warper_type: "sparse_event"
+    smooth_weight: 0.3
+    flow_scaling: 16.0
+    loss_scaling: true
+    loss_weight: 0.0
+    use_backward: true
+    num_reference_times: 11
+    auxiliary_flow_loss: true
+    auxiliary_flow_loss_weight: 0.05
+    auxiliary_flow_scales: ["h16", "h8", "h4", "h2"]
+    pretrained_weights: "outputs/sofe/dsec/ssnn_net_v2_hybrid/ssnn_net_v2_hybrid_g11_1_r2_dsec_sched_pretrain/latest.pth"
+    freeze: true
+    output:
+      type: "iwe_liu_rgb"
+      t_ref: 1.0
+      iwe_channels: "liu_rgb"
+      iwe_normalize: "p99"
+      iwe_scale: 1.0
+      iwe_splat: "bilinear"
+      iwe_align_to_rgb: "auto"
+  edum:
+    enabled: true
+    kernel_size: 3
+    mid_channels: 32
+    scale_factor: 2
+    event_native_height: 480
+    event_native_width: 640
+  cmm:
+    enabled: true
+    fusion_layers: [3, 4, 5]
+    d_state: 16
+    d_conv: 3
+    expand: 2.0
+    dt_rank: auto
+    dropout: 0.0
+  use_cmm: true
+  fusion_layers: [3, 4, 5]
+
+training:
+  batch_size: 4
+  num_epochs: 300
+
+eval:
+  interval: 30
+  save_interval: 10
+
+log:
+  output_dir: "./outputs/baselines"
+  experiment_name: "rgbe_ssnn_net_v2_iwe_edum_cmm_m"
+
+wandb:
+  use_wandb: true
+  project_name: "smcfnet_baselines"
+  run_name: "rgbe_ssnn_net_v2_iwe_edum_cmm_m"
+  group: "baseline_300ep"
+  tags: ["baseline", "rgbe", "ssnn_net_v2", "sofe", "edum", "cmm", "m", "iwe", "rectified", "300ep"]

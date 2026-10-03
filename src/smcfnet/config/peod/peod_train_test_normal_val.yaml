@@ -1,0 +1,31 @@
+dataset:
+  name: PEOD
+  root: /cluster/work/kristvje/projects/smcm-mcfnet/peod
+  image_height: 720
+  image_width: 1280
+  classes:
+    - car
+    - person
+    - bus
+    - truck
+    - 2-wheeler
+    - 3-wheeler
+
+  train_subsets:
+    - challenge
+    - motion_blur
+    - normal
+
+  # Training code only allows train/val validation during training. Map the
+  # val split to the labeled PEOD test/normal subset for checkpoint selection.
+  val_split_dir: test
+  val_subsets:
+    - normal
+
+  test_subsets:
+    - challenge
+    - normal
+
+  train_sequences: auto
+  val_sequences: auto
+  test_sequences: auto

@@ -1,0 +1,76 @@
+# OFE from-scratch sweep: Cuadrado U-Net, supervised flow loss.
+# This run starts from random initialization; no pretrained MCM weights are set.
+_base_: "../../_base/debug.yaml"
+
+training:
+  mode: "mcm_pretrain"
+  batch_size: 1
+  num_epochs: 15
+  max_steps_per_epoch: 1000
+  max_total_steps: 30000
+  optimizer: "adamw"
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  lr_scheduler: "cosine"
+  warmup_epochs: 3
+  warmup_lr: 0.00001
+  use_amp: false
+  grad_clip: 1.0
+  log_grad_norm: true
+  log_grad_norm_interval: 50
+  use_mosaic: false
+  use_mixup: false
+  mosaic_prob: 0.0
+  mixup_prob: 0.0
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/optical_flow.yaml"
+  event_bins: 21
+  mapper_load_events: true
+  mapper_load_images: false
+  mapper_prefer_distorted: false
+  mapper_rectified_events_resolution: "orig"
+  mapper_load_tracks: false
+  mapper_build_targets: false
+  mapper_load_flow: true
+  num_workers: 4
+
+model:
+  mcm:
+    enabled: true
+    mode: "snn"
+    architecture: "cuadrado_unet"
+    estimator_representation: "cuadrado_histogram"
+    output_representation: "iwe"
+    loss_type: "event_warping_supervised"
+    warper_type: "sparse_event"
+    flow_scaling: 1.0
+    loss_scaling: true
+    smooth_weight: 1.0
+    loss_kwargs:
+      smoothness_mode: "mean_l1"
+      alpha: 1.0
+      beta: 1.0
+      max_epe: 128.0
+    encoder_channels: [32, 64, 128, 256]
+    num_res_blocks: 2
+    lif_alpha: 0.9
+    lif_theta: 1.0
+
+eval:
+  interval: 5
+  save_interval: 2
+
+log:
+  output_dir: "./outputs/baseline_v3/mcm/cuadrado"
+  experiment_name: "cuadrado_unet_supervised_spiking"
+  log_interval: 50
+
+wandb:
+  use_wandb: false
+  project_name: "mcm_pretrain"
+  group: "cuadrado_unet_supervised_to_selfsupervised"
+  tags: ["cuadrado_unet", "supervised", "rectified_orig"]
+  log_every_n_steps: 10
+  flush_every_n_steps: 50
+  mode: "online"

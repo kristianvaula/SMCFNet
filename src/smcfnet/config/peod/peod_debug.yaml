@@ -1,0 +1,27 @@
+dataset:
+  name: PEOD
+  root: /cluster/work/kristvje/projects/smcm-mcfnet/peod
+  image_height: 720
+  image_width: 1280
+  classes:
+    - car
+    - person
+    - bus
+    - truck
+    - 2-wheeler
+    - 3-wheeler
+
+  train_subsets:
+    - challenge
+  val_split_dir: train
+  val_subsets:
+    - challenge
+  test_subsets:
+    - challenge
+
+  train_sequences:
+    - sequence_001
+  val_sequences:
+    - sequence_002
+  test_sequences:
+    - sequence_001_test

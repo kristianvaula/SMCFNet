@@ -1,0 +1,35 @@
+dataset:
+  name: PEOD
+  root: /cluster/work/kristvje/projects/smcm-mcfnet/peod
+  image_height: 720
+  image_width: 1280
+  classes:
+    - car
+    - person
+    - bus
+    - truck
+    - 2-wheeler
+    - 3-wheeler
+
+  # PEOD annotations currently appear as:
+  #   annotations/coco_0111_last/{train,test}/{challenge,normal,motion_blur}/*.json
+  # or:
+  #   coco_0111_last/{train,test}/{challenge,normal,motion_blur}/*.json
+  train_subsets:
+    - challenge
+    - motion_blur
+    - normal
+  val_split_dir: train
+  val_subsets:
+    - normal
+  test_subsets:
+    - challenge
+    - normal
+
+  train_sequences: auto
+  # PEOD has no official validation split, and val_split_dir is the train
+  # directory. val_sequences MUST be an explicit held-out list disjoint from
+  # train; an empty list / 'auto' is rejected by build_peod_sequence_metas to
+  # prevent silent train==val leakage (issue #108). Set this before training.
+  val_sequences: []
+  test_sequences: auto

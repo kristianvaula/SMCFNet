@@ -1,0 +1,81 @@
+# Cuadrado U-Net self-supervised finetune from the latest supervised rerun.
+# The supervised checkpoint is produced by cuadrado_unet_supervised.yaml under
+# outputs/baseline_v3/mcm/cuadrado/cuadrado_unet_supervised/latest.pth.
+_base_: "../../_base/debug.yaml"
+
+num_gpus: 1
+
+training:
+  mode: "mcm_pretrain"
+  batch_size: 4
+  num_epochs: 30
+  max_steps_per_epoch: 1000
+  max_total_steps: 30000
+  optimizer: "adamw"
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  lr_scheduler: "cosine"
+  warmup_epochs: 0
+  warmup_lr: 0.0
+  use_amp: false
+  grad_clip: 5.0
+  use_mosaic: false
+  use_mixup: false
+  mosaic_prob: 0.0
+  mixup_prob: 0.0
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/dsec.yaml"
+  event_bins: 21
+  mapper_load_events: true
+  mapper_load_images: false
+  mapper_load_tracks: false
+  mapper_build_targets: false
+  mapper_prefer_distorted: false
+  mapper_rectified_events_resolution: "orig"
+  mapper_load_flow: false
+  num_workers: 4
+
+model:
+  pretrained: false
+  mcm:
+    enabled: true
+    architecture: "cuadrado_unet"
+    estimator_representation: "cuadrado_histogram"
+    output_representation: "iwe"
+    # Match the supervised checkpoint semantics. Strict weight loading only
+    # checks tensor compatibility; using SNN mode here changes runtime behavior.
+    mode: "ann"
+    input_representation: "voxel"
+    prefetcher_type: "auto"
+    pretrained_weights: "outputs/baseline_iter_1/mcm/cuadrado/cuadrado_unet_supervised/latest.pth"
+    loss_type: "event_warping"
+    warper_type: "sparse_event"
+    flow_scaling: 1.0
+    loss_scaling: true
+    smooth_weight: 0.001
+    loss_kwargs:
+      smoothness_mode: "original"
+    contrast_weight: 1.0
+    magnitude_weight: 0.0
+
+eval:
+  interval: 5
+  save_interval: 5
+  cleanup_after_eval: true
+  empty_cache_after_eval: true
+
+log:
+  output_dir: "./outputs/baseline_v3/mcm/cuadrado"
+  experiment_name: "cuadrado_unet_finetune_selfsupervised_original_sw0001"
+  log_interval: 20
+  verbose_validation: true
+
+wandb:
+  use_wandb: true
+  project_name: "mcm_pretrain"
+  group: "cuadrado_unet_supervised_to_selfsupervised"
+  tags: ["cuadrado_unet", "finetune", "selfsupervised", "rectified_orig", "smooth_original"]
+  log_every_n_steps: 10
+  flush_every_n_steps: 50
+  mode: "online"

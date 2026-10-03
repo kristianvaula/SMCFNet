@@ -1,0 +1,43 @@
+# Debug base config: fast sanity checks on a single GPU.
+# Extends default.yaml with debug-friendly overrides.
+_base_: "default.yaml"
+
+num_gpus: 1
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/dsec_debug.yaml"
+  num_workers: 2
+  image_height: 480
+  image_width: 640
+  mapper_prefer_distorted: false
+  mapper_rectified_events_resolution: "orig"
+
+model:
+  size: "s"
+  pretrained: false
+  mcm:
+    input_representation: "voxel"
+    prefetcher_type: "auto"
+
+training:
+  batch_size: 2
+  num_epochs: 5
+  warmup_epochs: 1
+  use_mosaic: false
+  use_mixup: false
+  mosaic_prob: 0.0
+  mixup_prob: 0.0
+
+eval:
+  interval: 5
+  save_interval: 5
+  cleanup_after_eval: true
+  empty_cache_after_eval: true
+
+log:
+  output_dir: "./outputs/debug"
+  log_interval: 10
+
+wandb:
+  use_wandb: false
+  mode: "disabled"

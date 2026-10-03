@@ -1,0 +1,118 @@
+#!/bin/bash
+#SBATCH --account=share-ie-idi
+#SBATCH --job-name=dsec_preprocess
+#SBATCH --time=0-12:00:00
+
+#SBATCH --partition=GPUQ
+#SBATCH --gres=gpu:1
+#SBATCH --mem=128G
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --output=outputs/preprocess_%j.txt
+#SBATCH --error=outputs/preprocess_%j.err
+
+WORKDIR=${SLURM_SUBMIT_DIR:-$(pwd)}
+cd "${WORKDIR}"
+echo "Running from: ${WORKDIR}"
+echo "Job name: ${SLURM_JOB_NAME}"
+echo "Job ID:   ${SLURM_JOB_ID}"
+echo "Nodes:    ${SLURM_JOB_NODELIST}"
+echo "Host:     $(hostname)"
+echo "Date:     $(date)"
+
+echo "CPU allocation:"
+echo "  SLURM_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK:-unset}"
+echo "  SLURM_JOB_CPUS_PER_NODE=${SLURM_JOB_CPUS_PER_NODE:-unset}"
+command -v taskset >/dev/null 2>&1 && taskset -pc $$ || true
+grep -E "Cpus_allowed_list|Mems_allowed_list" /proc/self/status || true
+
+# Clean module state first
+module purge
+
+# Load modules (Anaconda first so `conda` is available).
+module load HDF5/1.14.0-iimpi-2023a
+
+# Initialize conda in this non-interactive shell and activate environment
+USER=$(whoami)
+source /cluster/work/${USER}/miniconda3/etc/profile.d/conda.sh
+
+echo "Activating conda env: smcm-mcfnet"
+conda activate smcm-mcfnet || { echo "Failed to activate conda env 'smcm-mcfnet'"; exit 1; }
+
+# Quick environment check
+python - <<'PY'
+import sys, torch, h5py, numpy
+print("Python:", sys.executable)
+print("Torch:", torch.__version__)
+print("H5py:", h5py.__version__)
+print("Numpy:", numpy.__version__)
+print("CUDA available:", torch.cuda.is_available())
+PY
+
+# Data root configuration
+DATA_ROOT="/cluster/work/${USER}/projects/smcm-mcfnet/data"
+echo "Data root: ${DATA_ROOT}"
+
+# Get mode from command line argument or default to both
+# Supported: train | test | both | reset
+MODE="${1:-both}"
+DRY_RUN="${2:-}"
+echo "Mode: ${MODE}"
+if [ "${DRY_RUN}" = "--dry-run" ]; then
+    echo "Dry run: enabled"
+fi
+
+# Ensure outputs directory exists
+mkdir -p outputs
+
+echo "=========================================="
+echo "DSEC Dataset Preprocessing"
+echo "=========================================="
+echo ""
+
+# Check if progress file exists, initialize if needed
+if [ ! -f "progress.txt" ]; then
+    echo "Progress file not found. Initializing..."
+    python preprocessor.py --data-root "$DATA_ROOT" --init-progress
+    echo ""
+fi
+
+# Optional: export runtime tweaks
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+
+# Make Python logs appear immediately
+export PYTHONUNBUFFERED=1
+
+echo "GPU inventory (nvidia-smi -L):"
+command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L || echo "nvidia-smi not found"
+
+echo "Starting preprocessing at $(date)"
+echo ""
+
+# Ensure we run from the preprocessing script directory so relative paths work
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+echo "Preprocessing script dir: ${SCRIPT_DIR}"
+
+# Run preprocessing via wrapper
+if [ "${DRY_RUN}" = "--dry-run" ]; then
+    /cluster/work/${USER}/projects/smcm-mcfnet/SMCM-MCFNet/src/smcfnet/dataset/dsec/preprocessing/run_preprocessing.sh "${MODE}" --dry-run
+else
+    /cluster/work/${USER}/projects/smcm-mcfnet/SMCM-MCFNet/src/smcfnet/dataset/dsec/preprocessing/run_preprocessing.sh "${MODE}"
+fi
+
+EXIT_CODE=$?
+
+echo ""
+echo "=========================================="
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "Preprocessing completed successfully!"
+else
+    echo "Preprocessing failed with exit code: $EXIT_CODE"
+fi
+echo "Finished at $(date)"
+echo "=========================================="
+
+exit $EXIT_CODE

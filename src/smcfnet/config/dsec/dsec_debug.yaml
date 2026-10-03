@@ -1,0 +1,20 @@
+dataset:
+  name: DSEC
+  root: /cluster/work/kristvje/projects/smcm-mcfnet/data  # Absolute path to data folder
+  
+  # Camera side
+  camera: left  # Options: left, right
+  
+  # Training sequences (from data/train/)
+  train_sequences:
+    - interlaken_00_c
+    - interlaken_00_d
+    - interlaken_00_e
+    - interlaken_00_f
+   # - interlaken_00_g
+  
+  # Test/validation sequences (from data/test/)
+  test_sequences:
+    - interlaken_00_a
+    - interlaken_00_b
+  # - interlaken_01_a

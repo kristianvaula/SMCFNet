@@ -1,0 +1,34 @@
+numpy>=2
+pytest-timeout>=2.3
+torch>=1.7
+h5py>=3.7
+pyyaml>=6.0
+imageio>=2.25
+torch-scatter
+h5py
+numba
+imageio
+hdf5 
+hdf5plugin
+torchvision
+torchaudio
+matplotlib
+tensorboard
+opencv-python
+pillow 
+tqdm
+loguru
+thop
+ninja
+tabulate
+psutil
+wandb
+einops
+causal-conv1d>=1.4.0
+mamba-ssm>=2.2.2
+
+# verified versions
+# pycocotools corresponds to https://github.com/ppwwyyxx/cocoapi
+pycocotools>=2.0.2
+onnx>=1.13.0
+onnx-simplifier==0.4.10

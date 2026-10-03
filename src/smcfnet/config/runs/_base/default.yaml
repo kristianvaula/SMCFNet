@@ -1,0 +1,187 @@
+# Base config: shared defaults for all run configurations.
+# Override specific fields in child configs using _base_.
+
+num_gpus: 4
+dist_url: "auto"
+seed: 42
+
+data:
+  dataset_config: "src/smcfnet/config/dsec/dsec.yaml"
+  event_bins: 5
+  event_window_ms: 50
+  image_height: 1080
+  image_width: 1440
+  num_workers: 2
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+  drop_last: true
+  cache_train: false
+  cache_val: false
+  sampler_shuffle: true
+  sampler_seed: null
+  mapper_load_events: true
+  mapper_load_tracks: false
+  mapper_mmap_tracks: true
+  mapper_load_images: false
+  mapper_prefer_distorted: false
+  mapper_rectified_events_resolution: "orig"
+  mapper_build_targets: false
+  mapper_load_flow: false
+
+model:
+  input_mode: "dual"
+  backbone: "cspdarknet"
+  size: "m"
+  num_classes: 8
+  pretrained: true
+  pretrained_path: ./src/smcfnet/model/weights/yolox/yolox_m.pth
+  head_type: "yolox"
+  depthwise: false
+  activation: "silu"
+  event_representation: "voxel"
+  mcm:
+    enabled: false
+    architecture: ecm
+    mode: ann
+    input_representation: voxel
+    prefetcher_type: auto
+    reset_on_sequence_change: true
+    bptt_steps: null
+    step_time_us: null
+    partition_mode: fixed_time
+    events_per_step_target: null
+    step_dt_max_us: null
+    step_dt_min_us: null
+    max_steps_per_sample: null
+    readout_every_n_steps: null
+    readout_interval_us: null
+    decay_tau_us: null
+    sofe_architecture: {}
+    sofe_search_space: {}
+    encoder_channels:
+    - 32
+    - 64
+    - 128
+    - 256
+    num_steps: null
+    stage_depths: null
+    stage_num_heads: null
+    window_size: 7
+    mlp_ratio: 4.0
+    num_res_blocks: 2
+    contrast_weight: 1.0
+    smooth_weight: 0.0005
+    smooth_loss_scale: 1.0
+    contrast_clamp: 10.0
+    magnitude_weight: 0.0
+    use_backward: true
+    lif_alpha: 0.9
+    lif_theta: 1.0
+    neuron_type: lif
+    neuron_kwargs: null
+    loss_type: event_warping
+    loss_kwargs:
+      smoothness_mode: original
+    mid_channels: 32
+    loss_weight: 0.1
+    lr_factor: 1.0
+    flow_scaling: 640.0
+    loss_scaling: true
+    warper_type: sparse_event
+    pretrained_weights: null
+    freeze: false
+  edum:
+    enabled: false
+    kernel_size: 3
+    mid_channels: 32
+    scale_factor: 2
+    event_native_height: 480
+    event_native_width: 640
+  cmm:
+    enabled: false
+    fusion_layers:
+    - 3
+    - 4
+    - 5
+    d_state: 16
+    d_conv: 3
+    expand: 2.0
+    dt_rank: auto
+    dropout: 0.0
+  fusion_layers: [3, 4, 5]
+
+training:
+  mode: joint
+  batch_size: 4
+  num_epochs: 300
+  max_steps_per_epoch: null
+  max_total_steps: null
+  profile_model_stages: false
+  optimizer: adamw
+  learning_rate: 0.0005
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 0.0001
+  lr_scheduler: cosine
+  warmup_epochs: 5
+  warmup_lr: 1.0e-05
+  warmup_use_scheduler: false
+  lr_step_size: 50
+  lr_gamma: 0.1
+  lr_milestones:
+  - 150
+  - 225
+  lr_t_max: null
+  lr_eta_min: null
+  steps_per_epoch: null
+  total_steps: null
+  onecycle_pct_start: 0.3
+  onecycle_div_factor: 25.0
+  onecycle_final_div_factor: 10000.0
+  loss_obj: 1.0
+  loss_cls: 1.0
+  loss_box: 5.0
+  grad_clip: 10.0
+  log_grad_norm: false
+  log_grad_norm_interval: 50
+  use_amp: true
+  use_mosaic: true
+  use_mixup: true
+  mosaic_prob: 0.9
+  mixup_prob: 0.5
+  augmentation_backend: auto
+
+eval:
+  interval: 30
+  save_interval: 10
+  metrics: ["mAP50", "mAP", "mAP75"]
+  split: "val"
+  dataset_config: null
+  sequences: []
+  iou_threshold: 0.5
+  conf_threshold: 0.001
+  nms_threshold: 0.65
+  cleanup_after_eval: true
+  empty_cache_after_eval: true
+
+viz:
+  max_images: 200
+  conf_threshold: 0.3
+  dir: "eval_vis"
+  random_sequence: true
+
+log:
+  output_dir: "./outputs"
+  experiment_name: "default"
+  log_interval: 50
+  memory_log_interval: 0
+  save_all_checkpoints: false
+  verbose_validation: false
+
+wandb:
+  use_wandb: false
+  project_name: "smcfnet_dsec"
+  log_every_n_steps: 10
+  flush_every_n_steps: 50
+  mode: "online"

@@ -1,0 +1,21 @@
+# Streaming SSNN-Net v2 SOFE pretraining with fixed 500 us event partitioning.
+_base_: "ssnn_net_v2_hybrid_pretrain.yaml"
+
+model:
+  mcm:
+    partition_mode: "fixed_time"
+    step_time_us: 500
+    events_per_step_target: null
+    step_dt_min_us: null
+    step_dt_max_us: null
+    max_steps_per_sample: null
+    bptt_steps: 10
+    decay_tau_us: 10000.0
+
+log:
+  output_dir: "./outputs/sofe/ssnn_net_v2_fixed_time"
+  experiment_name: "ssnn_net_v2_fixed_time_dt500_pretrain"
+
+wandb:
+  group: "ssnn_net_v2_pretrain"
+  tags: ["ssnn_net", "ssnn_net_v2", "pretrain", "fixed_time_dt500", "streaming_events", "iwe", "rectified_orig"]

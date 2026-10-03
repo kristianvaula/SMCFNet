@@ -1,0 +1,78 @@
+# Streaming SSNN-Net v2 SOFE pretraining with hybrid event partitioning.
+_base_: "_base_ssnn_net.yaml"
+
+training:
+  mode: "mcm_pretrain"
+  batch_size: 1
+  num_epochs: 30
+  max_steps_per_epoch: 500
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  grad_clip: 5.0
+  streaming_step_policy: "chunk_backward"
+
+data:
+  mapper_load_flow: true
+  num_workers: 4
+
+model:
+  mcm:
+    partition_mode: "hybrid"
+    step_time_us: null
+    events_per_step_target: 15000
+    step_dt_min_us: null
+    step_dt_max_us: null
+    max_steps_per_sample: null
+    bptt_steps: 5
+    decay_tau_us: 10000.0
+    flow_scaling: 4.0
+    smooth_weight: 1.0
+    loss_type: "event_warping_supervised"
+    warper_type: "sparse_event"
+    loss_kwargs:
+      smoothness_mode: "edge_aware_l1"
+      edge_weight_gamma: 5.0
+    auxiliary_flow_loss: true
+    auxiliary_flow_loss_weight: 0.25
+    auxiliary_flow_scales: ["h16", "h8", "h4", "h2"]
+    auxiliary_warp_loss: false
+    auxiliary_warp_loss_weight: 0.10
+    sofe_architecture:
+      family: "ssnn_net"
+      ssnn_version: "v2"
+      step_encoding: "hist2"
+      normalize_counts: false
+      count_encoding: "raw"
+      count_scale: 1.0
+      base_channels: 24
+      ssnn_stage_channels: [24, 48, 96, 192]
+      ssnn_num_stages: 4
+      kernel_size: 5
+      ssnn_bottleneck_dilations: [1, 2, 4]
+      ssnn_encoder_signal: "membrane"
+      ssnn_edge_tap: "hist"
+      ssnn_refine_channels: 32
+      ssnn_refine_layers: 2
+      ssnn_readout: "pyramid_residual"
+      ssnn_multiply_factor: 10.0
+      ssnn_hard_reset: false
+      ssnn_spike_decay_mode: "hold"
+      surrogate_function: "sigmoid"
+      surrogate_alpha: 4.0
+      detach_reset: true
+      spiking_v_threshold: 1.0
+      spiking_v_reset: 0.0
+      flow_activation: "softsign"
+      flow_head_init: "small_normal"
+      flow_head_init_std: 0.01
+      ssnn_pred_kernel_size: 3
+
+log:
+  output_dir: "./outputs/sofe/ssnn_net_v2"
+  experiment_name: "ssnn_net_v2_hybrid_pretrain"
+
+wandb:
+  project_name: "smcfnet_ssnn_net"
+  group: "ssnn_net_v2_pretrain"
+  tags: ["ssnn_net", "ssnn_net_v2", "pretrain", "hybrid", "streaming_events", "iwe", "rectified_orig"]
+  mode: "disabled"

@@ -1,0 +1,63 @@
+# STTP Design C on R3 half-res MCM checkpoint
+# R3 (mcm_cmax_R3_halfres/best.pth) produced alive flow at 480x640 with the
+# ego-motion signature documented in docs/process/2026-04-15-r3-ego-motion.md.
+# Hypothesis: even if the flow models ego-motion rather than per-object
+# motion, the STTP head can still learn to subtract it and recover
+# per-object displacement. If Design C beats Design B here, flow adds real
+# signal; if not, the ego-motion interpretation is confirmed and we need a
+# per-object training objective for the MCM.
+# Backbone + MCM both come from R3's checkpoint (joint-trained at 480x640).
+_base_: "../_base/default.yaml"
+num_gpus: 1
+
+data:
+  num_workers: 8
+  image_height: 480              # match R3 training resolution
+  image_width: 640
+  mapper_load_events: true
+  mapper_load_tracks: true
+  mapper_load_images: true
+  mapper_prefer_distorted: true  # R3 was trained on distorted events
+  mapper_build_targets: true
+
+model:
+  input_mode: "dual"
+  size: "s"
+  pretrained: true
+  pretrained_path: "./outputs/mcm/mcm_cmax_R3_halfres/best.pth"
+  mcm:
+    enabled: true
+    loss_weight: 0.0             # don't train MCM, just produce flow
+    freeze: true                 # freeze MCM weights — use R3 as-is
+    flow_scaling: 640.0          # must match R3 training
+  sttp:
+    enabled: true
+    flow_channels: 2             # Design C: stem + 2-channel flow
+    flow_proj_dim: 16
+    target_mode: "absolute"
+    loss_weight: 0.5
+    future_steps: 5
+    freeze_detector: true        # freeze backbone + neck + detection head
+
+training:
+  batch_size: 16                 # half-res is cheap enough to double batch
+  num_epochs: 10
+  learning_rate: 0.001
+  warmup_epochs: 2
+  warmup_lr: 1.0e-05
+  grad_clip: 5.0
+  use_amp: true
+
+eval:
+  interval: 2
+  save_interval: 5
+
+log:
+  output_dir: "./outputs/sttp/"
+  experiment_name: "sttp_flowinj_mcm"
+
+wandb:
+  use_wandb: true
+  project_name: "smcfnet_sttp"
+  run_name: "sttp_flowinj_mcm"
+  tags: ["sttp", "flow-injection", "frozen-detector", "flow", "halfres", "r3-mcm"]

@@ -1,0 +1,13 @@
+# E-RAFT matched-pair, post-v4. Issue #023.
+# Flow source: precomputed E-RAFT cache (needs P3 scan verification).
+_base_: "sttp_flowinj_mcm.yaml"
+
+data:
+  precomputed_flow_dir: "outputs/cache/eraft_flow_480x640"
+
+log:
+  experiment_name: "sttp_flowinj_eraft_v4"
+
+wandb:
+  run_name: "sttp_flowinj_eraft_v4"
+  tags: ["sttp", "flow-injection", "frozen-detector", "eraft", "v4", "post-pr100", "post-l2-fix", "matched-pair"]

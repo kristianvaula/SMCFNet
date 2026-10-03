@@ -1,0 +1,3 @@
+label	design	flow_source	k	config	resume
+# Example manifest row (label, design, flow_source, k, config, resume)
+# keep tab-separated; lines starting with # are ignored

@@ -1,0 +1,112 @@
+# Full DSEC pretraining config from SSNN-Net v2 fixed-time EA candidate g16_0_r2.
+#
+# Source run:
+#   outputs/.final_baselines/evolution/ssnn/ft/
+#     ssnn_net_v2_ea_fixed_time_low_epe_aux005_seed45_from_hybrid_seed45/
+#     evolution/generation_016/g16_0_r2
+#
+# EA result (rung-2, 512 iters, single evaluation):
+#   EPE median:      5.742 px
+#   EPE IQR:         8.966 px   (lowest IQR of single-eval dt=5000 candidates)
+#   SNN stability:   0.156      (best stability of any top-tier valid candidate)
+#   Compute cost:    0.252      (lowest cost of any top-tier valid candidate)
+#   Centered ratio:  0.982      (healthy, no DC collapse)
+#   Flow mag:        8.219 px   (strong, well-scaled flow)
+#   MFR:             0.304      (low DC content)
+#   GPU peak MB:     1192       (smallest of all top candidates; ~1.2 GB headroom)
+#   Wall ms/iter:    149        (fastest of all dt=5000 candidates)
+#
+# Rationale over higher-EPE candidates:
+#   - g17_2_r2 (EPE 5.27): uses `tanh` flow activation → bounded to ±16px under
+#     flow_scaling=16; sub-optimal for large-flow sequences in full pretraining.
+#   - g8_0_r2  (EPE 5.31): GPU peak 2427 MB (2× others); bptt=8 with only 3
+#     readouts per sequence — high memory, coarse gradient coverage.
+#   - g18_2_r2 (EPE 5.31): highest stability penalty (0.202) of top candidates.
+#   - g14_2_r2 (EPE 5.48): alternative if larger capacity is preferred (see below).
+#
+# Architecture: small-tier [16, 32, 64, 128] with spike encoder + hist edge tap
+# removed → most efficient fixed-time SSNN-v2 config.
+# MCM: step_time_us=5000 (21 steps/sequence), bptt=3, identity flow activation.
+_base_: "ssnn_net_v2_fixed_time_dt500_pretrain.yaml"
+
+training:
+  num_epochs: 30
+  max_steps_per_epoch: 1000
+  max_total_steps: 30000
+
+data:
+  flow_index_start: 0
+  flow_index_count: null
+  flow_index_stride: 1
+  num_workers: 4
+
+model:
+  mcm:
+    partition_mode: "fixed_time"
+    step_time_us: 5000
+    events_per_step_target: null
+    step_dt_min_us: null
+    step_dt_max_us: null
+    max_steps_per_sample: null
+    bptt_steps: 3
+    decay_tau_us: 5000.0
+    flow_scaling: 12.0
+    smooth_weight: 0.3
+    contrast_weight: 2.0
+    loss_weight: 0.1
+    loss_type: "event_warping_supervised"
+    warper_type: "sparse_event"
+    loss_kwargs:
+      smoothness_mode: "edge_aware_l1"
+      edge_weight_gamma: 5.0
+    auxiliary_flow_loss: true
+    auxiliary_flow_loss_weight: 0.05
+    auxiliary_flow_scales: ["h16", "h8", "h4", "h2"]
+    auxiliary_warp_loss: false
+    sofe_architecture:
+      family: "ssnn_net"
+      ssnn_version: "v2"
+      count_scale: 1.0
+      base_channels: 32
+      kernel_size: 5
+      ssnn_stage_channels: [16, 32, 64, 128]
+      ssnn_num_stages: 4
+      ssnn_bottleneck_dilations: [1, 2, 4]
+      ssnn_encoder_signal: "spike"
+      ssnn_edge_tap: "none"
+      ssnn_refine_channels: 32
+      ssnn_refine_layers: 1
+      ssnn_readout: "single"
+      ssnn_multiply_factor: 10.0
+      ssnn_hard_reset: false
+      ssnn_spike_decay_mode: "hold"
+      surrogate_function: "sigmoid"
+      surrogate_alpha: 2.0
+      detach_reset: true
+      spiking_v_threshold: 1.2
+      spiking_v_reset: 0.0
+      flow_activation: "identity"
+      flow_head_init: "small_normal"
+      flow_head_init_std: 0.005
+      ssnn_pred_kernel_size: 5
+
+log:
+  output_dir: "./outputs/sofe/ssnn_net_v2_fixed_time"
+  experiment_name: "ssnn_net_v2_fixed_time_g16_0_pretrain"
+
+wandb:
+  project_name: "smcfnet_ssnn_net"
+  group: "ssnn_net_v2_pretrain"
+  tags:
+    [
+      "ssnn_net",
+      "ssnn_net_v2",
+      "pretrain",
+      "fixed_time",
+      "g16_0",
+      "ea_fixed_time_low_epe_aux005_seed45",
+      "streaming_events",
+      "iwe",
+      "rectified_orig",
+    ]
+  mode: "disabled"
